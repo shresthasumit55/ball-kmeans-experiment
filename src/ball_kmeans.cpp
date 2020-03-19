@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 int BallKmeans::runThread(int threadId, int maxIterations) {
 
@@ -33,11 +34,6 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
     double *stableAreaRadius = new double[k]{0};
     std::vector<int> *annulusAreaRadius = new std::vector<int>[k];
-
-
-
-
-
 
 
     while ((iterations < maxIterations) && (! converged)) {
@@ -80,7 +76,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
         }
 
 
-        // find neightbour clusters from step 9
+        // call findNeighbors function here
 
         for (int iter=0;iter<k;iter++){
             sort(neighborClusters[iter].begin(), neighborClusters[iter].end(), sortPair);
@@ -103,7 +99,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                     annulusAreaRadius[iter].push_back(0.5 * neighborClusters[iter].at(areaIdx+1).second);
                 }
 
-                //TODO last annulus area fill
+                //TODO fill last annulus area
 
 
                 for (int j=0;j<clusterMembers[iter].size();j++){
@@ -150,25 +146,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
         }
 
 
-
-        // loop over all examples
-        for (int i = startNdx; i < endNdx; ++i) {
-            // look for the closest center to this example
-            int closest = 0;
-            double closestDist2 = std::numeric_limits<double>::max();
-            for (int j = 0; j < k; ++j) {
-                double d2 = pointCenterDist2(i, j);
-                if (d2 < closestDist2) {
-                    closest = j;
-                    closestDist2 = d2;
-                }
-            }
-            if (assignment[i] != closest) {
-                changeAssignment(i, closest, threadId);
-            }
-        }
-
-        verifyAssignment(iterations, startNdx, endNdx);
+        // TODO fix this block
 
         synchronizeAllThreads();
 
@@ -191,7 +169,7 @@ void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, in
 
     for (int i=0;i<k;i++){
         if (i!=iter){
-
+            //TODO fix this block
         }
 
     }
