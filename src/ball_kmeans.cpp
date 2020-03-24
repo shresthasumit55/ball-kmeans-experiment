@@ -23,23 +23,31 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
     int dimensions = x->d;
 
     Dataset *clusterCentroids = new Dataset(k, dimensions);
+    Dataset *oldCentroids = new Dataset(k, dimensions);
 
     int *clusterMemberCount = new int[k]{0};
     std::vector<int> *clusterMembers = new std::vector<int>[k];
-    int *clusterRadius = new int[k]{0};
+    double *clusterRadius = new int[k]{0};
 
     //holds the index of the neighbouring cluster and distance from the current centroid.
     std::vector<pair<int,double>> *neighborClusters = new std::vector<pair<int,double>>[k];
 
 
     double *stableAreaRadius = new double[k]{0};
-    std::vector<int> *annulusAreaRadius = new std::vector<int>[k];
+    std::vector<double> *annulusAreaRadius = new std::vector<int>[k];
+
+    double **centerDistances = new double *[k];
+    for (int iter = 0; iter < k; iter++) {
+        centerDistances[iter] = new double[k];
+    }
 
 
     while ((iterations < maxIterations) && (! converged)) {
         ++iterations;
 
+        oldCentroids = clusterCentroids;
 
+        //step 3-5: calculatng centroids of ball clusters
         for (int i = startNdx; i < endNdx; ++i){
             int clusterIndex = assignment[i];
             clusterMembers[clusterIndex].push_back(i);
@@ -58,7 +66,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
             }
         }
 
-
+        // step 6 begin
         for (int iter=0;iter<k;iter++){
 
             for (int i=0;i<clusterMembers[iter].size();i++){
@@ -75,14 +83,14 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
         }
 
-
-        // call findNeighbors function here
-
         for (int iter=0;iter<k;iter++){
+            //step 8,9,10 in the algorithm: neighbour cluster search and sort
+            searchNeighborClusters(clusterCentroids,oldCentroids,k,clusterRadius,iter,dimensions,neighborClusters);
             sort(neighborClusters[iter].begin(), neighborClusters[iter].end(), sortPair);
         }
 
         for (int iter=0; iter<k;iter++){
+            // step 11: determining stableArea points
                 int closestClusterIndex = neighborClusters[iter].at(0).first;
                 double temp = 0;
                 for (int j=0;j<dimensions;j++){
@@ -98,10 +106,11 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                     // need to merge stable area radius here as well
                     annulusAreaRadius[iter].push_back(0.5 * neighborClusters[iter].at(areaIdx+1).second);
                 }
+                //this corresponds the actual radius of the current cluster.
+                annulusAreaRadius[iter].push_back(clusterRadius[iter]);
 
-                //TODO fill last annulus area
 
-
+                //step 12: assigning points to
                 for (int j=0;j<clusterMembers[iter].size();j++){
                     int dataIdx = clusterMembers[iter].at(j);
                     //calculate distance
@@ -112,7 +121,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                     }
                     distancePointToCentroid = sqrt(distancePointToCentroid);
 
-                    //step 12
+                    //step 12: checking if point is closer to any neighbour cluster
                     if (distancePointToCentroid>stableAreaRadius[iter]){
 
                         //this means it is in annulus area, not stable area
@@ -164,13 +173,14 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
 
 void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, int *clusterRadius, int j,
-        int dimension, std::vector<pair<int,double>> *neighborClusters){
+        int dimension, std::vector<pair<int,double>> *neighborClusters, double **centerDistances){
 
     neighborClusters[j].clear();
 
     for (int i=0;i<k;i++){
         if (i!=j){
             double distance_t = calculateDistance(centroids->data,centroids->data,i,j,dimension);
+            double distance_t = centerDistances[j][i];
             double deltaI = calculateDistance(centroids->data,oldCentroids->data,i,i,dimension);
             double deltaJ = calculateDistance(centroids->data,oldCentroids->data,j,j,dimension);
             double radius = clusterRadius[i];
@@ -186,6 +196,8 @@ void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, in
 
                 }
             }
+            centerDistances[j][i] = distance_t1;
+
 
 
         }
@@ -195,7 +207,7 @@ void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, in
 
 }
 
-bool sortPair(const pair<int,double> &a,
+double BallKMeans::bool sortPair(const pair<int,double> &a,
                const pair<int,double> &b)
 {
     return (a.second < b.second);
