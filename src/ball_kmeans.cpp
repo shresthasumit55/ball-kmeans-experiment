@@ -163,13 +163,31 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 }
 
 
-void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, int *clusterRadius, int iter){
+void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, int *clusterRadius, int j,
+        int dimension, std::vector<pair<int,double>> *neighborClusters){
 
-
+    neighborClusters[j].clear();
 
     for (int i=0;i<k;i++){
-        if (i!=iter){
-            //TODO fix this block
+        if (i!=j){
+            double distance_t = calculateDistance(centroids->data,centroids->data,i,j,dimension);
+            double deltaI = calculateDistance(centroids->data,oldCentroids->data,i,i,dimension);
+            double deltaJ = calculateDistance(centroids->data,oldCentroids->data,j,j,dimension);
+            double radius = clusterRadius[i];
+            double distance_t1;
+
+            if (distance_t>=2 * radius * deltaI * deltaJ)
+                distance_t1 = distance_t - deltaI - deltaJ;
+            else{
+                distance_t1 = calculateDistance(centroids->data,centroids->data,i,j,dimension);
+                if (distance_t1<2*radius){
+                    //add the index of the cluster and its distance from the queried cluster
+                    neighborClusters[j].push_back(std::make_pair(i,distance_t1));
+
+                }
+            }
+
+
         }
 
     }
@@ -181,4 +199,13 @@ bool sortPair(const pair<int,double> &a,
                const pair<int,double> &b)
 {
     return (a.second < b.second);
+}
+
+double BallKmeans::calculateDistance(double *centroids, double *anotherCentroids int i, int j, int dimension){
+    double distance = 0;
+    for (int it=0:it<dimension;it++){
+        double diff = centroids[i+it] - anotherCentroids[j+it];
+        distance+=diff * diff;
+    }
+    return sqrt(distance);
 }

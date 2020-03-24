@@ -14,6 +14,8 @@ public:
     virtual ~BallKmeans() { free(); }
 protected:
     virtual int runThread(int threadId, int maxIterations);
+private:
+    double calculateDistance(double *centroids, int i, int j, int dimension);
 };
 
 #endif //BALL_K_MEANS_BALL_KMEANS_H
