@@ -160,13 +160,40 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
         synchronizeAllThreads();
 
         if (threadId == 0) {
-            int furthestMovingCenter = move_centers();
-            converged = (0.0 == centerMovement[furthestMovingCenter]);
+            converged = true;
+
+            int iter=0;
+            while ((iter<k) && (converged)){
+                double centersDistance = 0;
+                for (int j = 0; j < dimensions; j++) {
+                    double delta = clusterCentroids->data[iter+j] - oldCentroids->data[iter + j];
+                    double delta2 = delta * delta;
+                    centersDistance += delta2;
+                }
+                if (centersDistance != 0) {
+                    converged = false;
+                }
+                centerMovement[iter] = sqrt(centersDistance);
+                iter++;
+            }
+
+            //int furthestMovingCenter = move_centers();
+            //converged = (0.0 == centerMovement[furthestMovingCenter]);
         }
 
         synchronizeAllThreads();
     }
 
+    /*
+     * Note: Since we are working in ball clusters, will need to assign the final centers to its corresponding
+     *   data structure in the framework
+     */
+
+    for (int iter = 0; iter < k; iter++) {
+        for (int j = 0; j < dimensions; j++) {
+            centers->data[iter + j] = clusterCentroids->data[iter + j];
+        }
+    }
     return iterations;
 
 }
@@ -197,9 +224,6 @@ void BallKmeans::searchNeighborClusters(Dataset *centroids, Dataset *oldCentroid
                 }
             }
             centerDistances[j][i] = distance_t1;
-
-
-
         }
 
     }
