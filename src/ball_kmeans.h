@@ -7,6 +7,7 @@
 
 
 #include "original_space_kmeans.h"
+#include <vector>
 
 class BallKmeans : public OriginalSpaceKmeans {
 public:
@@ -15,11 +16,11 @@ public:
 protected:
     virtual int runThread(int threadId, int maxIterations);
 private:
-    double calculateDistance(double *centroids, int i, int j, int dimension);
-    void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, int *clusterRadius, int j,
-                                int dimension, std::vector<pair<int,double>> *neighborClusters);
-    double BallKMeans::bool sortPair(const pair<int,double> &a,
-                                     const pair<int,double> &b);
+    double calculateDistance(double *centroids, double *anotherCentroids, int i, int j, int dimension);
+    void searchNeighborClusters(Dataset *centroids, Dataset *oldCentroids, int k, double *clusterRadius, int j,
+                                int dimension, std::vector<std::pair<int,double>> *neighborClusters,
+                                double **centerDistances);
+    //bool sortPairs(const std::pair<int,double> &a,const std::pair<int,double> &b);
 };
 
 #endif //BALL_K_MEANS_BALL_KMEANS_H
