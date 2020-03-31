@@ -9,23 +9,9 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
-#include <execinfo.h>
-#include <signal.h>
-#include <cstdlib>
-#include <unistd.h>
-
-void error_handler(int sig) {
-    void *array[10];
-    size_t size;
-    size = backtrace(array, 10); //get the void pointers for all of the entries
-    std::cout << "Error: signal "<< sig <<":\n"; //display error signal
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(1);
-}
 
 int BallKmeans::runThread(int threadId, int maxIterations) {
 
-    signal(SIGSEGV, error_handler);
 
     // track the number of iterations the algorithm performs
     int iterations = 0;
@@ -55,6 +41,20 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
         centerDistances[iter] = new double[k];
     }
 
+    //initializing clusterCentroids with initial centers
+    for (int iter = 0; iter < k; iter++) {
+        for (int j = 0; j < dimensions; j++) {
+            clusterCentroids->data[iter + j] = centers->data[iter + j];
+        }
+    }
+
+    for (int i=0;i<k;i++){
+        for (int j=i+1;j<k;j++){
+            centerDistances[i][j] = calculateDistance(clusterCentroids->data,clusterCentroids->data,i,j,dimensions);
+            centerDistances[j][i] = centerDistances[i][j];
+        }
+    }
+
     while ((iterations < maxIterations) && (! converged)) {
         ++iterations;
 
@@ -63,6 +63,8 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                 oldCentroids->data[i+j] = clusterCentroids->data[i+j];
             }
             clusterMembers[i].clear();
+            clusterMemberCount[i] = 0;
+            clusterRadius[i]=0;
         }
 
         //step 3-5: calculatng centroids of ball clusters
@@ -98,10 +100,10 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                     temp += diff * diff;
                 }
                 temp = sqrt(temp);
-                if (temp > clusterRadius[iter])
+                if (temp > clusterRadius[iter]) {
                     clusterRadius[iter] = temp;
+                }
             }
-
 
             //}
 
@@ -141,7 +143,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
             int numberOfAnnulusArea = neighborClusters[iter].size();
             annulusAreaRadius[iter].clear();
 
-            for (int areaIdx = 0; areaIdx < numberOfAnnulusArea-1; areaIdx++) {
+            for (int areaIdx = 0; areaIdx < (numberOfAnnulusArea-1); areaIdx++) {
                 // need to merge stable area radius here as well
                 annulusAreaRadius[iter].push_back(0.5 * neighborClusters[iter].at(areaIdx + 1).second);
             }
@@ -150,12 +152,12 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
             annulusAreaRadius[iter].push_back(clusterRadius[iter]);
 
             //step 12: assigning points to annulus areas
-            for (int j = 0; j < (int) (clusterMembers[iter].size()); j++) {
+            for (int j = 0; j < currentClusterSize; j++) {
                 int dataIdx = clusterMembers[iter].at(j);
                 //calculate distance
                 double distancePointToCentroid = 0;
-                for (int idx = 0; idx < k; idx++) {
-                    double diff = x->data[dataIdx + idx] - clusterCentroids->data[iter + j];
+                for (int idx = 0; idx < dimensions; idx++) {
+                    double diff = x->data[dataIdx + idx] - clusterCentroids->data[iter + idx];
                     distancePointToCentroid += diff * diff;
                 }
                 distancePointToCentroid = sqrt(distancePointToCentroid);
@@ -171,6 +173,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
                         double distPointToNeighbour = 0;
                         int currentNeighbourIndex = neighborClusters[iter].at(annulusAreaIdx).first;
+
                         for (int idx = 0; idx < k; idx++) {
                             double diff = x->data[dataIdx + idx] - clusterCentroids->data[currentNeighbourIndex + j];
                             distPointToNeighbour += diff * diff;
@@ -189,11 +192,11 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                 }
 
                 }
+
             }
         }
         }
 
-        std::cout<<"\n hey hey \n";
 
 
         // TODO fix this block
@@ -224,7 +227,6 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
         synchronizeAllThreads();
     }
-    std::cout<<"iter"<<iterations;
 
     /*
      * Note: Since we are working in ball clusters, will need to assign the final centers to its corresponding

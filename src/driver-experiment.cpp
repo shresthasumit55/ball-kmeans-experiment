@@ -48,6 +48,7 @@
 #include "heap_kmeans.h"
 #include "naive_kernel_kmeans.h"
 #include "elkan_kernel_kmeans.h"
+#include "ball_kmeans.h"
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -203,6 +204,8 @@ int main(int argc, char **argv) {
             algorithm = new AnnulusKmeans();
         } else if (command == "elkan") {
             algorithm = new ElkanKmeans();
+        }else if (command == "ball") {
+            algorithm = new BallKmeans();
         } else if (command == "drake") {
             // Read the number of bounds
             int b;
