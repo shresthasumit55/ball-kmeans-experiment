@@ -228,21 +228,10 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
         synchronizeAllThreads();
     }
 
-    std::cout<<"Iterations "<<iterations;
-
     /*
      * Note: Since we are working in ball clusters, will need to assign the final centers to its corresponding
      *   data structure in the framework
      */
-    for (int iter = 0; iter < k; iter++) {
-        for (int j = 0; j < dimensions; j++) {
-            std::cout<<"\n"<<clusterCentroids->data[iter*dimensions+j]<<"  ";
-            //centers->data[iter + j] = clusterCentroids->data[iter + j];
-        }
-        std::cout<<"\n";
-
-    }
-
 
     for (int iter = 0; iter < k; iter++) {
         for (int j = 0; j < dimensions; j++) {
