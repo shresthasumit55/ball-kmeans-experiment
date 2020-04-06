@@ -44,9 +44,11 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
     //initializing clusterCentroids with initial centers
     for (int iter = 0; iter < k; iter++) {
         for (int j = 0; j < dimensions; j++) {
-            clusterCentroids->data[iter + j] = centers->data[iter + j];
+            clusterCentroids->data[iter*dimensions + j] = centers->data[iter*dimensions + j];
         }
     }
+
+
 
     for (int i=0;i<k;i++){
         for (int j=i+1;j<k;j++){
@@ -60,7 +62,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
         for (int i=0;i<k;i++){
             for (int j = 0; j < dimensions; j++) {
-                oldCentroids->data[i+j] = clusterCentroids->data[i+j];
+                oldCentroids->data[i*dimensions+j] = clusterCentroids->data[i*dimensions+j];
             }
             clusterMembers[i].clear();
             clusterMemberCount[i] = 0;
@@ -74,16 +76,14 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
             clusterMemberCount[clusterIndex]+=1;
             for (int j=0;j<dimensions;j++){
-                //may need to initialize clusterCentroids to 0
-                clusterCentroids->data[clusterIndex+j]+=x->data[i+j];
-
+                clusterCentroids->data[clusterIndex*dimensions+j]+=x->data[i*dimensions+j];
             }
         }
 
 
         for (int i=0;i<k;i++){
             for (int j=0;j<dimensions;j++){
-                clusterCentroids->data[i+j]/=clusterMemberCount[i];
+                clusterCentroids->data[i*dimensions+j]/=clusterMemberCount[i];
             }
         }
 
@@ -96,7 +96,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                 int dataIndex = clusterMembers[iter].at(i);
                 double temp = 0;
                 for (int j = 0; j < dimensions; j++) {
-                    double diff = x->data[dataIndex + j] - clusterCentroids->data[iter + j];
+                    double diff = x->data[dataIndex*dimensions + j] - clusterCentroids->data[iter*dimensions + j];
                     temp += diff * diff;
                 }
                 temp = sqrt(temp);
@@ -133,7 +133,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
             double temp = 0;
 
             for (int j = 0; j < dimensions; j++) {
-                double diff = clusterCentroids->data[iter + j] - clusterCentroids->data[closestClusterIndex + j];
+                double diff = clusterCentroids->data[iter*dimensions + j] - clusterCentroids->data[closestClusterIndex*dimensions + j];
                 temp += diff * diff;
             }
             stableAreaRadius[iter] = 0.5 * sqrt(temp);
@@ -157,7 +157,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                 //calculate distance
                 double distancePointToCentroid = 0;
                 for (int idx = 0; idx < dimensions; idx++) {
-                    double diff = x->data[dataIdx + idx] - clusterCentroids->data[iter + idx];
+                    double diff = x->data[dataIdx*dimensions + idx] - clusterCentroids->data[iter*dimensions + idx];
                     distancePointToCentroid += diff * diff;
                 }
                 distancePointToCentroid = sqrt(distancePointToCentroid);
@@ -175,7 +175,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                         int currentNeighbourIndex = neighborClusters[iter].at(annulusAreaIdx).first;
 
                         for (int idx = 0; idx < k; idx++) {
-                            double diff = x->data[dataIdx + idx] - clusterCentroids->data[currentNeighbourIndex + j];
+                            double diff = x->data[dataIdx*dimensions + idx] - clusterCentroids->data[currentNeighbourIndex*dimensions + j];
                             distPointToNeighbour += diff * diff;
                         }
                         distPointToNeighbour = sqrt(distPointToNeighbour);
@@ -210,7 +210,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
             while ((iter<k) && (converged)){
                 double centersDistance = 0;
                 for (int j = 0; j < dimensions; j++) {
-                    double delta = clusterCentroids->data[iter+j] - oldCentroids->data[iter + j];
+                    double delta = clusterCentroids->data[iter*dimensions+j] - oldCentroids->data[iter*dimensions + j];
                     double delta2 = delta * delta;
                     centersDistance += delta2;
                 }
@@ -228,14 +228,26 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
         synchronizeAllThreads();
     }
 
+    std::cout<<"Iterations "<<iterations;
+
     /*
      * Note: Since we are working in ball clusters, will need to assign the final centers to its corresponding
      *   data structure in the framework
      */
+    for (int iter = 0; iter < k; iter++) {
+        for (int j = 0; j < dimensions; j++) {
+            std::cout<<"\n"<<clusterCentroids->data[iter*dimensions+j]<<"  ";
+            //centers->data[iter + j] = clusterCentroids->data[iter + j];
+        }
+        std::cout<<"\n";
+
+    }
+
 
     for (int iter = 0; iter < k; iter++) {
         for (int j = 0; j < dimensions; j++) {
-            centers->data[iter + j] = clusterCentroids->data[iter + j];
+            //(*centers)(iter,j) = (*clusterCentroids)(iter,j);
+            centers->data[iter*dimensions + j] = clusterCentroids->data[iter*dimensions + j];
         }
     }
     return iterations;
@@ -276,7 +288,7 @@ void BallKmeans::searchNeighborClusters(Dataset *centroids, Dataset *oldCentroid
 double BallKmeans::calculateDistance(double *centroids, double *anotherCentroids, int i, int j, int dimension) {
     double distance = 0;
     for (int it=0;it<dimension;it++){
-        double diff = centroids[i+it] - anotherCentroids[j+it];
+        double diff = centroids[i*dimension+it] - anotherCentroids[j*dimension+it];
         distance+=diff * diff;
     }
     return sqrt(distance);
