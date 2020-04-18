@@ -12,7 +12,6 @@
 
 int BallKmeans::runThread(int threadId, int maxIterations) {
 
-
     // track the number of iterations the algorithm performs
     int iterations = 0;
 
@@ -69,6 +68,12 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
             clusterRadius[i]=0;
         }
 
+        for (int iter = 0; iter < k; iter++) {
+            for (int j = 0; j < dimensions; j++) {
+                clusterCentroids->data[iter*dimensions + j] = centers->data[iter*dimensions + j];
+            }
+        }
+
         //step 3-5: calculatng centroids of ball clusters
         for (int i = startNdx; i < endNdx; ++i){
             int clusterIndex = assignment[i];
@@ -105,9 +110,6 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                 }
             }
 
-            //}
-
-            //for (int iter=0;iter<k;iter++){
 
             //step 8,9,10 in the algorithm: neighbour cluster search and sort
             neighborClusters[iter].clear();
@@ -181,7 +183,8 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                         distPointToNeighbour = sqrt(distPointToNeighbour);
 
                         if (distPointToNeighbour < distancePointToCentroid) {
-                            assignment[dataIdx] = currentNeighbourIndex;
+                            changeAssignment(dataIdx,currentNeighbourIndex,threadId);
+                            //assignment[dataIdx] = currentNeighbourIndex;
                         }
 
                         if (distancePointToCentroid > annulusAreaRadius[iter].at(annulusAreaIdx)) {
@@ -204,6 +207,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
         synchronizeAllThreads();
 
         if (threadId == 0) {
+            /*
             converged = true;
 
             int iter=0;
@@ -220,12 +224,13 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                 centerMovement[iter] = sqrt(centersDistance);
                 iter++;
             }
+             */
 
-            //int furthestMovingCenter = move_centers();
-            //converged = (0.0 == centerMovement[furthestMovingCenter]);
+            int furthestMovingCenter = move_centers();
+            converged = (0.0 == centerMovement[furthestMovingCenter]);
         }
 
-        synchronizeAllThreads();
+        //synchronizeAllThreads();
     }
 
     /*
