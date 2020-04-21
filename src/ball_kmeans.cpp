@@ -18,7 +18,6 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
     int startNdx = start(threadId);
     int endNdx = end(threadId);
 
-    //int dataSize = x->n;
     int dimensions = x->d;
 
     Dataset *clusterCentroids = new Dataset(k, dimensions);
@@ -41,36 +40,82 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
     }
 
     //initializing clusterCentroids with initial centers
-    for (int iter = 0; iter < k; iter++) {
+   /* for (int iter = 0; iter < k; iter++) {
         for (int j = 0; j < dimensions; j++) {
             clusterCentroids->data[iter*dimensions + j] = centers->data[iter*dimensions + j];
         }
     }
+    */
 
-
-
-    for (int i=0;i<k;i++){
-        for (int j=i+1;j<k;j++){
-            centerDistances[i][j] = calculateDistance(clusterCentroids->data,clusterCentroids->data,i,j,dimensions);
-            centerDistances[j][i] = centerDistances[i][j];
+    for (int i = startNdx; i < endNdx; ++i) {
+        // look for the closest center to this example
+        int closest = 0;
+        double closestDist2 = std::numeric_limits<double>::max();
+        for (int j = 0; j < k; ++j) {
+            double d2 = pointCenterDist2(i, j);
+            if (d2 < closestDist2) {
+                closest = j;
+                closestDist2 = d2;
+            }
+        }
+        if (assignment[i] != closest) {
+            changeAssignment(i, closest, threadId);
         }
     }
+
+
+
+
 
     while ((iterations < maxIterations) && (! converged)) {
         ++iterations;
 
-        for (int i=0;i<k;i++){
+        for (int iter = 0; iter < k; iter++) {
             for (int j = 0; j < dimensions; j++) {
-                oldCentroids->data[i*dimensions+j] = clusterCentroids->data[i*dimensions+j];
+                oldCentroids->data[iter*dimensions + j] = centers->data[iter*dimensions + j];
             }
-            clusterMembers[i].clear();
-            clusterMemberCount[i] = 0;
-            clusterRadius[i]=0;
+            clusterMembers[iter].clear();
+            clusterMemberCount[iter] = 0;
+            clusterRadius[iter]=0;
         }
+
+        if (threadId == 0) {
+            /*
+            converged = true;
+
+            int iter=0;
+            while ((iter<k) && (converged)){
+                double centersDistance = 0;
+                for (int j = 0; j < dimensions; j++) {
+                    double delta = clusterCentroids->data[iter*dimensions+j] - oldCentroids->data[iter*dimensions + j];
+                    double delta2 = delta * delta;
+                    centersDistance += delta2;
+                }
+                if (centersDistance != 0) {
+                    converged = false;
+                }
+                centerMovement[iter] = sqrt(centersDistance);
+                iter++;
+            }
+             */
+
+            int furthestMovingCenter = move_centers();
+            converged = (0.0 == centerMovement[furthestMovingCenter]);
+        }
+
+
+
 
         for (int iter = 0; iter < k; iter++) {
             for (int j = 0; j < dimensions; j++) {
                 clusterCentroids->data[iter*dimensions + j] = centers->data[iter*dimensions + j];
+            }
+        }
+
+        for (int i=0;i<k;i++){
+            for (int j=i+1;j<k;j++){
+                centerDistances[i][j] = calculateDistance(clusterCentroids->data,clusterCentroids->data,i,j,dimensions);
+                centerDistances[j][i] = centerDistances[i][j];
             }
         }
 
@@ -80,17 +125,22 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
             clusterMembers[clusterIndex].push_back(i);
 
             clusterMemberCount[clusterIndex]+=1;
+
+            /*
             for (int j=0;j<dimensions;j++){
                 clusterCentroids->data[clusterIndex*dimensions+j]+=x->data[i*dimensions+j];
             }
+             */
         }
 
-
+/*
         for (int i=0;i<k;i++){
             for (int j=0;j<dimensions;j++){
                 clusterCentroids->data[i*dimensions+j]/=clusterMemberCount[i];
             }
         }
+
+        */
 
         // step 6 begin
         for (int iter=0;iter<k;++iter) {
@@ -123,10 +173,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
                       [](const std::pair<int, double> &left, const std::pair<int, double> &right) {
                           return left.second < right.second;
                       });
-            //}
 
-
-            //for (int iter=0; iter<k;iter++){
             // step 11: determining stableArea points
 
 
@@ -206,31 +253,7 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
 
         synchronizeAllThreads();
 
-        if (threadId == 0) {
-            /*
-            converged = true;
 
-            int iter=0;
-            while ((iter<k) && (converged)){
-                double centersDistance = 0;
-                for (int j = 0; j < dimensions; j++) {
-                    double delta = clusterCentroids->data[iter*dimensions+j] - oldCentroids->data[iter*dimensions + j];
-                    double delta2 = delta * delta;
-                    centersDistance += delta2;
-                }
-                if (centersDistance != 0) {
-                    converged = false;
-                }
-                centerMovement[iter] = sqrt(centersDistance);
-                iter++;
-            }
-             */
-
-            int furthestMovingCenter = move_centers();
-            converged = (0.0 == centerMovement[furthestMovingCenter]);
-        }
-
-        //synchronizeAllThreads();
     }
 
     /*
@@ -238,12 +261,14 @@ int BallKmeans::runThread(int threadId, int maxIterations) {
      *   data structure in the framework
      */
 
+    /*
     for (int iter = 0; iter < k; iter++) {
         for (int j = 0; j < dimensions; j++) {
             //(*centers)(iter,j) = (*clusterCentroids)(iter,j);
             centers->data[iter*dimensions + j] = clusterCentroids->data[iter*dimensions + j];
         }
     }
+     */
     return iterations;
 
 }
